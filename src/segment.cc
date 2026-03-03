@@ -1,9 +1,10 @@
 #include "segment.h"
 
-Segment::Segment(int segment_id, std::string file_path) {
-    segment_id = segment_id;
-    file_path = file_path;
-    file = std::fstream(file_path, std::fstream::binary);
+Segment::Segment(uint64_t segment_id, std::string file_path) {
+    this->segment_id = segment_id;
+    this->file_path = file_path;
+    file = std::fstream(file_path, std::fstream::in | 
+        std::fstream::out | std::fstream::binary | std::fstream::trunc);
 }
 
 uint64_t Segment::set(std::string value) {
