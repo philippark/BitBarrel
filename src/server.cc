@@ -1,14 +1,16 @@
-#include "server.h"
+#include "segment.h"
 
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <list>
 
-Server::Server() {
-    dataStore.push_back(new Segment("test1"));
-}
+std::list<Segment*> dataStore;
 
-void Server::run() {
+int main()
+{
+    dataStore.push_back(new Segment("segment1"));
+    
     while (true) {
         std::string input;
         getline(std::cin, input);
