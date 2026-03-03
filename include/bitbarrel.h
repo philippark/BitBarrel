@@ -11,7 +11,7 @@ private:
     Segment* active_segment;
 
     // Format: key : (segment_id, offset, size)
-    std::unordered_map<std::string, std::tuple<int, uint64_t, size_t>> keydir;
+    std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, size_t>> keydir;
 
 public:
     BitBarrel();
