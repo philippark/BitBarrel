@@ -1,14 +1,14 @@
-#include "server.h"
+#include "bitbarrel.h"
 
 #include <string>
 #include <iostream>
 #include <sstream>
 
-Server::Server() {
-    dataStore.push_back(new Segment("test1"));
-}
 
-void Server::run() {
+int main()
+{
+    BitBarrel bit_barrel;
+
     while (true) {
         std::string input;
         getline(std::cin, input);
@@ -20,12 +20,11 @@ void Server::run() {
         if (op == "set") {
             std::string key, value;
             iss >> key >> value;
-            dataStore.back()->set(key, value);
+            bit_barrel.set(key, value);
         } else if (op == "get") {
             std::string key;
             iss >> key;
-            std::cout << dataStore.back()->get(key) << "\n";
-            
+            std::cout << bit_barrel.get(key) << "\n";
         }
     }
 }
