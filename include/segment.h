@@ -9,11 +9,13 @@ class Segment {
 private:
     std::string file_path;
     std::fstream file;
-    int segment_id;
+    uint64_t segment_id;
     uint64_t segment_size = 0;
 
 public:
-    Segment(int segment_id, std::string file_path);
+    Segment(uint64_t segment_id, std::string file_path);
+
+    uint64_t get_id() {return segment_id;};
     
     // writes a value to file, returns the offset it's stored at
     uint64_t set(std::string value);
