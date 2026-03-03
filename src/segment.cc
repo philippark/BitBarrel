@@ -1,32 +1,26 @@
 #include "segment.h"
 
-Segment::Segment(std::string file_name) {
-    wfile = std::ofstream(file_name, std::ofstream::binary);
-    rfile = std::ifstream(file_name, std::ifstream::binary);
+Segment::Segment(int segment_id, std::string file_path) {
+    segment_id = segment_id;
+    file_path = file_path;
+    file = std::fstream(file_path, std::fstream::binary);
 }
 
-void Segment::set(std::string key, std::string value) {
+uint64_t Segment::set(std::string value) {
     size_t size = value.size();
-    wfile.write(reinterpret_cast<char *>(&size), sizeof(size));
-    wfile.write(value.c_str(), size); 
-    wfile.flush();
+    file.write(value.c_str(), size); 
 
-    keydir[key] = segment_size;
-    segment_size += sizeof(size) + size;
+    segment_size += size;
+
+    return segment_size - size;
 }
 
-std::string Segment::get(std::string key) {
-    int64_t offset = keydir[key];
+std::string Segment::get(uint64_t offset, size_t size) {
+    file.seekg(offset, std::ios::beg);
+    if (!file) throw std::runtime_error("Failed to seek");
 
-    rfile.seekg(offset, std::ios::beg);
-    if (!rfile) throw std::runtime_error("Failed to seek");
-
-    size_t length = 0;
-    rfile.read(reinterpret_cast<char*>(&length), sizeof(length));
-    if (!rfile) throw std::runtime_error("Failed to read length");
-
-    std::string value(length, '\0');
-    rfile.read(value.data(), length);
+    std::string value(size, '\0');
+    file.read(value.data(), size);
 
     return value;
 }
