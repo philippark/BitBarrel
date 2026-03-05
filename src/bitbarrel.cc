@@ -19,27 +19,38 @@ BitBarrel::BitBarrel() {
     active_segment = current_segment; 
 }
 
-void BitBarrel::set(std::string key, std::string value) {
-    uint32_t value_pos = active_segment->set(key, value); 
-    uint32_t timestamp = get_current_timestamp();
+Status BitBarrel::set(std::string key, std::string value) {
+    Result<uint32_t> res = active_segment->set(key, value); 
+    if (!res.isOk()) {
+        return Status::Error;
+    }
+    uint32_t value_pos = res.value.value();
 
+    // update key directory
+    uint32_t timestamp = get_current_timestamp();
     KeyDirEntry kde {active_segment->get_id(),
         static_cast<uint32_t>(sizeof(value)), value_pos, timestamp};
     key_dir[key] = kde;
+
+    return Status::Ok;
 }
 
-std::string BitBarrel::get(std::string key) {
+Result<std::string> BitBarrel::get(std::string key) {
     if (key_dir.find(key) == key_dir.end()) {
-        return "key not found"; // TODO: pack this in an error or status struct
+        return Result<std::string>{Status::NotFound};
     }
 
     KeyDirEntry kde = key_dir[key];
 
     for (auto it = data_store.rbegin(); it != data_store.rend(); ++it) {
         if ((*it)->get_id() == kde.segment_id) {
-            return (*it)->get(kde.value_pos, kde.value_size);
+            Result<std::string> res = (*it)->get(kde.value_pos, kde.value_size);
+            if (!res.isOk()) {
+                return Result<std::string>{Status::Error};
+            }
+            return Result<std::string>{Status::Ok, res.value.value()};
         }
     }
 
-    return "none found bucko";
+    return Result<std::string>{Status::NotFound};
 }

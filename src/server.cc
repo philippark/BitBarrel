@@ -24,7 +24,12 @@ int main()
         } else if (op == "get") {
             std::string key;
             iss >> key;
-            std::cout << bit_barrel.get(key) << "\n";
+            
+            Result<std::string> res = bit_barrel.get(key);
+
+            if (res.isOk()) {
+                std::cout << res.value.value() << "\n";
+            }
         }
     }
 }

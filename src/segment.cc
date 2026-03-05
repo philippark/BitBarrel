@@ -8,7 +8,7 @@ Segment::Segment(uint64_t segment_id, std::string file_path) {
         std::fstream::out | std::fstream::binary | std::fstream::trunc);
 }
 
-uint64_t Segment::set(std::string key, std::string value) {
+Result<uint32_t> Segment::set(std::string key, std::string value) {
     uint32_t key_size = static_cast<uint32_t>(key.size());
     uint32_t value_size = static_cast<uint32_t>(value.size());
 
@@ -23,15 +23,16 @@ uint64_t Segment::set(std::string key, std::string value) {
 
     segment_size += sizeof(header) + key_size + value_size;
     uint32_t value_pos = segment_size - value_size;
-    return value_pos;
+
+    return Result<uint32_t>{Status::Ok, value_pos};
 }
 
-std::string Segment::get(uint64_t value_pos, uint32_t value_size) {
+Result<std::string> Segment::get(uint64_t value_pos, uint32_t value_size) {
     file.seekg(value_pos, std::ios::beg);
     if (!file) throw std::runtime_error("Failed to seek");
 
     std::string value(value_size, '\0');
     file.read(value.data(), value_size);
 
-    return value;
+    return Result<std::string>{Status::Ok, value};
 }

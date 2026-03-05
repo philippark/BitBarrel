@@ -1,6 +1,7 @@
 #pragma once
 
 #include "segment.h"
+#include "status.h"
 
 #include <list>
 #include <unordered_map>
@@ -22,7 +23,7 @@ private:
 
 public:
     BitBarrel();
-    void set(std::string key, std::string value);
-    std::string get(std::string key);
+    Status set(std::string key, std::string value);
+    Result<std::string> get(std::string key);
 
 };
