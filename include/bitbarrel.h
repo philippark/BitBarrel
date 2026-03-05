@@ -1,4 +1,7 @@
+#pragma once
+
 #include "segment.h"
+#include "status.h"
 
 #include <list>
 #include <unordered_map>
@@ -7,15 +10,20 @@
 
 class BitBarrel {
 private:
-    std::list<Segment*> dataStore;
-    Segment* active_segment;
+    struct KeyDirEntry {
+        uint64_t segment_id;
+        uint32_t value_size;
+        uint32_t value_pos;
+        uint32_t timestamp;
+    };
 
-    // Format: key : (segment_id, offset, size)
-    std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, size_t>> keydir;
+    std::list<Segment*> data_store;
+    Segment* active_segment;
+    std::unordered_map<std::string, KeyDirEntry> key_dir;
 
 public:
     BitBarrel();
-    void set(std::string key, std::string value);
-    std::string get(std::string key);
+    Status set(std::string key, std::string value);
+    Result<std::string> get(std::string key);
 
 };

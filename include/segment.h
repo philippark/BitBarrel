@@ -1,5 +1,6 @@
-#ifndef SEGMENT_H_
-#define SEGMENT_H_
+#pragma once
+
+#include "status.h"
 
 #include <string>
 #include <fstream>
@@ -24,10 +25,8 @@ public:
     uint64_t get_id() {return segment_id;};
     
     // writes entry to log, returns offset position for value
-    uint64_t set(std::string key, std::string value);
+    Result<uint32_t> set(std::string key, std::string value);
     
     // retrieves value from file at a given offset
-    std::string get(uint64_t value_pos, uint32_t value_size);
+    Result<std::string> get(uint64_t value_pos, uint32_t value_size);
 };
-
-#endif
