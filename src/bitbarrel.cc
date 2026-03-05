@@ -1,18 +1,10 @@
 #include "bitbarrel.h"
+#include "timestamp.h"
 
 #include <iostream>
 #include <chrono>
 #include <ctime>
 #include <filesystem>
-
-uint64_t get_current_timestamp() {
-    auto now = std::chrono::steady_clock::now();
-    auto ts = std::chrono::duration_cast<std::chrono::microseconds>(
-        now.time_since_epoch()
-    ).count();
-
-    return ts;
-}
 
 BitBarrel::BitBarrel() {
     // Use timestamp as a monotonic counter for the id 
@@ -28,7 +20,7 @@ BitBarrel::BitBarrel() {
 }
 
 void BitBarrel::set(std::string key, std::string value) {
-    uint64_t offset = active_segment->set(value); 
+    uint64_t offset = active_segment->set(key, value); 
     keydir[key] = std::make_tuple(active_segment->get_id(), offset, value.size());
 }
 
