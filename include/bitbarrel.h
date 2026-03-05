@@ -1,3 +1,5 @@
+#pragma once
+
 #include "segment.h"
 
 #include <list>

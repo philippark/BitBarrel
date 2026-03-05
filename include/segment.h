@@ -1,5 +1,4 @@
-#ifndef SEGMENT_H_
-#define SEGMENT_H_
+#pragma once 
 
 #include <string>
 #include <fstream>
@@ -29,5 +28,3 @@ public:
     // retrieves value from file at a given offset
     std::string get(uint64_t value_pos, uint32_t value_size);
 };
-
-#endif
