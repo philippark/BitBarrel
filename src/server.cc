@@ -7,7 +7,7 @@
 
 int main()
 {
-    BitBarrel bit_barrel;
+    BitBarrel bit_barrel("data");
 
     while (true) {
         std::string input;

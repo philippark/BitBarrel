@@ -1,22 +1,52 @@
 #include "bitbarrel.h"
 #include "timestamp.h"
+#include "scan_dir.h"
 
-#include <iostream>
 #include <chrono>
 #include <ctime>
 #include <filesystem>
+#include <algorithm>
+#include <fstream>
 
-BitBarrel::BitBarrel() {
-    // Use timestamp as a monotonic counter for the id 
-    uint64_t segment_id = get_current_timestamp();
+void BitBarrel::load_key_dir_from_segment(Segment *segment) {
+    auto entries = segment->getAllEntries();
     
-    // Create data directory if it doesn't exist
-    std::filesystem::create_directory("data");
-    std::string file_path = "data/" + std::to_string(segment_id);
+    for (const auto& entry : entries) {
+        KeyDirEntry kde{segment->get_id(), entry.value_size, 
+                        entry.value_pos, entry.timestamp};
+        key_dir[entry.key] = kde;
+    }
+}
 
-    Segment* current_segment = new Segment(segment_id, file_path);
-    data_store.push_back(current_segment);
-    active_segment = current_segment; 
+BitBarrel::BitBarrel(const std::string& dir_name) {
+    // Create directory if it doesn't exist
+    // TODO: maybe move this somewhere else, and also handle errors
+    if (std::filesystem::create_directory(dir_name)) {
+        std::cout << "created directory\n";
+    } else {
+        std::cout << "directory already exists or failed to create\n";
+    }
+
+    auto files = scan_dir(dir_name);
+    std::sort(files.begin(), files.end());
+
+    // rebuild key dir and in-mem list of segments
+    for (auto& file : files) {
+        uint32_t segment_id = static_cast<uint32_t>(std::stoi(file));
+        Segment *segment = new Segment(segment_id, dir_name + "/" + file);
+        data_store.push_back(segment);
+        load_key_dir_from_segment(segment);
+    }
+
+    if (data_store.empty()) {
+        // Create initial segment
+        uint32_t new_id = get_current_timestamp();
+        std::string file_path = dir_name + "/" + std::to_string(new_id);
+        Segment *segment = new Segment(new_id, file_path);
+        data_store.push_back(segment);
+    } 
+
+    active_segment = data_store.back();
 }
 
 Status BitBarrel::set(std::string key, std::string value) {
@@ -29,7 +59,7 @@ Status BitBarrel::set(std::string key, std::string value) {
     // update key directory
     uint32_t timestamp = get_current_timestamp();
     KeyDirEntry kde {active_segment->get_id(),
-        static_cast<uint32_t>(sizeof(value)), value_pos, timestamp};
+        static_cast<uint32_t>(value.size()), value_pos, timestamp};
     key_dir[key] = kde;
 
     return Status::Ok;

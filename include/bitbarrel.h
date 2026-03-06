@@ -11,7 +11,7 @@
 class BitBarrel {
 private:
     struct KeyDirEntry {
-        uint64_t segment_id;
+        uint32_t segment_id;
         uint32_t value_size;
         uint32_t value_pos;
         uint32_t timestamp;
@@ -21,8 +21,11 @@ private:
     Segment* active_segment;
     std::unordered_map<std::string, KeyDirEntry> key_dir;
 
+    // loads key directory entries from a segment
+    void load_key_dir_from_segment(Segment *segment);
+
 public:
-    BitBarrel();
+    BitBarrel(const std::string& dir_name);
     Status set(std::string key, std::string value);
     Result<std::string> get(std::string key);
 
