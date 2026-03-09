@@ -10,9 +10,8 @@
 class Segment {
 private:
     std::string file_path;
-    std::fstream file;
+    std::ofstream file;
     uint32_t segment_id;
-    uint64_t segment_size = 0;
 
     struct Header {
         uint32_t timestamp;
@@ -28,7 +27,7 @@ public:
         uint32_t timestamp;
     };
 
-    Segment(uint64_t segment_id, std::string file_path);
+    Segment(uint32_t segment_id, std::string file_path);
 
     uint32_t get_id() {return segment_id;};
     
@@ -36,8 +35,10 @@ public:
     Result<uint32_t> set(std::string key, std::string value);
     
     // retrieves value from file at a given offset
-    Result<std::string> get(uint64_t value_pos, uint32_t value_size);
+    Result<std::string> get(uint32_t value_pos, uint32_t value_size);
     
     // retrieves all entries from the segment
-    std::vector<Entry> getAllEntries();
+    std::vector<Entry> get_all_entries();
+
+    uint32_t get_size();
 };
