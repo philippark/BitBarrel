@@ -2,6 +2,7 @@
 #include "timestamp.h"
 #include "scan_dir.h"
 
+#include <iostream>
 #include <chrono>
 #include <ctime>
 #include <filesystem>
@@ -9,7 +10,7 @@
 #include <fstream>
 
 void BitBarrel::load_key_dir_from_segment(Segment *segment) {
-    auto entries = segment->getAllEntries();
+    auto entries = segment->get_all_entries();
     
     for (const auto& entry : entries) {
         KeyDirEntry kde{segment->get_id(), entry.value_size, 
