@@ -13,6 +13,13 @@ void BitBarrel::load_key_dir_from_segment(Segment *segment) {
     auto entries = segment->get_all_entries();
     
     for (const auto& entry : entries) {
+        // ignore if earlier entry
+        if (key_dir.find(entry.key) != key_dir.end()) {
+            if (key_dir[entry.key].timestamp > entry.timestamp) {
+                continue;
+            }
+        }
+        
         KeyDirEntry kde{segment->get_id(), entry.value_size, 
                         entry.value_pos, entry.timestamp};
         key_dir[entry.key] = kde;
@@ -27,17 +34,11 @@ Segment* BitBarrel::create_segment() {
 
 BitBarrel::BitBarrel(const std::string& dir_name) {
     // Create directory if it doesn't exist
-    // TODO: maybe move this somewhere else, and also handle errors
-    if (std::filesystem::create_directory(dir_name)) {
-        std::cout << "created directory\n";
-    } else {
-        std::cout << "directory already exists or failed to create\n";
-    }
+    std::filesystem::create_directory(dir_name);
 
     this->dir_name = dir_name;
 
     auto files = scan_dir(dir_name);
-    std::sort(files.begin(), files.end());
 
     // rebuild key dir and in-mem list of segments
     for (auto& file : files) {
