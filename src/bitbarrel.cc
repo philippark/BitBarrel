@@ -13,23 +13,32 @@ void BitBarrel::load_key_dir_from_segment(Segment *segment) {
     auto entries = segment->get_all_entries();
     
     for (const auto& entry : entries) {
+        // ignore if earlier entry
+        if (key_dir.find(entry.key) != key_dir.end()) {
+            if (key_dir[entry.key].timestamp > entry.timestamp) {
+                continue;
+            }
+        }
+        
         KeyDirEntry kde{segment->get_id(), entry.value_size, 
                         entry.value_pos, entry.timestamp};
         key_dir[entry.key] = kde;
     }
 }
 
+Segment* BitBarrel::create_segment() {
+    uint32_t id = get_current_timestamp();
+    std::string file_path = dir_name + "/" + std::to_string(id);
+    return new Segment(id, file_path);
+}
+
 BitBarrel::BitBarrel(const std::string& dir_name) {
     // Create directory if it doesn't exist
-    // TODO: maybe move this somewhere else, and also handle errors
-    if (std::filesystem::create_directory(dir_name)) {
-        std::cout << "created directory\n";
-    } else {
-        std::cout << "directory already exists or failed to create\n";
-    }
+    std::filesystem::create_directory(dir_name);
+
+    this->dir_name = dir_name;
 
     auto files = scan_dir(dir_name);
-    std::sort(files.begin(), files.end());
 
     // rebuild key dir and in-mem list of segments
     for (auto& file : files) {
@@ -41,9 +50,7 @@ BitBarrel::BitBarrel(const std::string& dir_name) {
 
     if (data_store.empty()) {
         // Create initial segment
-        uint32_t new_id = get_current_timestamp();
-        std::string file_path = dir_name + "/" + std::to_string(new_id);
-        Segment *segment = new Segment(new_id, file_path);
+        Segment *segment = create_segment(); 
         data_store.push_back(segment);
     } 
 
@@ -51,6 +58,12 @@ BitBarrel::BitBarrel(const std::string& dir_name) {
 }
 
 Status BitBarrel::set(std::string key, std::string value) {
+    std::cout << "active segment size: " << active_segment->get_size() << "\n";
+    if (active_segment->is_full(key.size() + value.size())) {
+        active_segment = create_segment();
+        data_store.push_back(active_segment); 
+    }
+
     Result<uint32_t> res = active_segment->set(key, value); 
     if (!res.isOk()) {
         return Status::Error;

@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <vector>
 
+static constexpr uint64_t MAX_SEGMENT_SIZE = 1ULL * 1024 * 1024 * 1024; // 1GB
+
 class Segment {
 private:
     std::string file_path;
@@ -41,4 +43,8 @@ public:
     std::vector<Entry> get_all_entries();
 
     uint32_t get_size();
+
+    bool is_full(uint64_t incoming_entry_size) {
+        return (this->get_size() + sizeof(Header) + incoming_entry_size) > MAX_SEGMENT_SIZE;
+    }
 };
