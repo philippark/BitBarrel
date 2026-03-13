@@ -62,7 +62,7 @@ Result<std::string> Segment::get(uint32_t value_pos, uint32_t value_size) {
     return Result<std::string>{Status::Ok, value};
 }
 
-std::vector<Segment::Entry> Segment::get_all_entries() {
+std::vector<Segment::Entry> Segment::get_all_entries() const {
     std::vector<Entry> entries;
 
     std::ifstream read_file(file_path, std::ios::in | std::ios::binary);

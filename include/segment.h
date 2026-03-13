@@ -31,7 +31,7 @@ public:
 
     Segment(uint32_t segment_id, std::string file_path);
 
-    uint32_t get_id() {return segment_id;};
+    uint32_t get_id() const {return segment_id;};
     
     // writes entry to log, returns offset position for value
     Result<uint32_t> set(std::string key, std::string value);
@@ -40,7 +40,7 @@ public:
     Result<std::string> get(uint32_t value_pos, uint32_t value_size);
     
     // retrieves all entries from the segment
-    std::vector<Entry> get_all_entries();
+    std::vector<Entry> get_all_entries() const;
 
     uint32_t get_size();
 

@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <string>
 #include <cstdint>
+#include <memory>
 
 class BitBarrel {
 private:
@@ -17,16 +18,16 @@ private:
         uint32_t timestamp;
     };
 
-    std::list<Segment*> data_store;
+    std::list<std::unique_ptr<Segment>> data_store;
     Segment* active_segment;
     std::unordered_map<std::string, KeyDirEntry> key_dir;
     std::string dir_name;
 
     // loads key directory entries from a segment
-    void load_key_dir_from_segment(Segment *segment);
+    void load_key_dir_from_segment(const Segment& segment);
 
     // Creates and returns a new segment
-    Segment* create_segment();
+    std::unique_ptr<Segment> create_segment();
 
 public:
     BitBarrel(const std::string& dir_name);
