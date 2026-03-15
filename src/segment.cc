@@ -7,12 +7,14 @@
 Segment::Segment(uint32_t segment_id, std::string file_path) {
     this->file_path = file_path;
     this->segment_id = segment_id;
-
-    file.open(file_path, std::ios::out | std::ios::binary | std::ios::app);
-    if (!file) throw std::runtime_error("Cannot open file: " + file_path);
 }
 
 Result<uint32_t> Segment::set(std::string key, std::string value) {
+    if (!file.is_open()) {
+        file.open(file_path, std::ios::out | std::ios::binary | std::ios::app);
+        if (!file) throw std::runtime_error("Cannot open file for writing: " + file_path);
+    }
+
     uint32_t key_size = static_cast<uint32_t>(key.size());
     uint32_t value_size = static_cast<uint32_t>(value.size());
 
@@ -66,8 +68,12 @@ std::vector<Segment::Entry> Segment::get_all_entries() const {
     std::vector<Entry> entries;
 
     std::ifstream read_file(file_path, std::ios::in | std::ios::binary);
-    if (!read_file) throw std::runtime_error("Cannot open read file: " + file_path);
-    
+
+    // If file doesn't exist yet, or is empty, return empty list
+    if (!read_file || read_file.peek() == std::ifstream::traits_type::eof()) {
+        return entries;
+    }
+
     read_file.seekg(0, std::ios::beg);
     
     while (true) {
@@ -96,7 +102,7 @@ uint32_t Segment::get_size() {
     std::error_code ec;
     auto size = std::filesystem::file_size(file_path, ec);
     if (ec) {
-        throw std::runtime_error("get_size failed: " + ec.message());
+        return 0; // file doesn't exist yet
     }
     return size;
 }
