@@ -39,15 +39,22 @@ BitBarrel::BitBarrel(const std::string& dir_name) {
     this->dir_name = dir_name;
 
     auto files = scan_dir(dir_name);
+    std::vector<uint64_t> segment_ids;
 
     // rebuild key dir and in-mem list of segments
     for (auto& file : files) {
         uint32_t segment_id = static_cast<uint32_t>(std::stoi(file));
-        auto segment = std::make_unique<Segment>(segment_id, dir_name + "/" + file);
+        segment_ids.push_back(segment_id);
+    }
+
+    std::sort(segment_ids.begin(), segment_ids.end());
+
+    for (auto segment_id : segment_ids) {
+        auto segment = std::make_unique<Segment>(segment_id, dir_name + "/" + std::to_string(segment_id));
         load_key_dir_from_segment(*segment);
         data_store.push_back(std::move(segment));
     }
-
+    
     if (data_store.empty()) {
         // Create initial segment
         auto segment = create_segment();
