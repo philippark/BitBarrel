@@ -37,4 +37,5 @@ public:
     Status set(std::string key, std::string value);
     Result<std::string> get(std::string key);
 
+    void compact();
 };

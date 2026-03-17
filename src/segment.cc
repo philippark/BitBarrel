@@ -106,3 +106,7 @@ uint32_t Segment::get_size() {
     }
     return size;
 }
+
+void Segment::remove_permanently() {
+    std::filesystem::remove(file_path);
+}

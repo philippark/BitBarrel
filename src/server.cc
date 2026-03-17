@@ -30,6 +30,9 @@ int main()
             if (res.isOk()) {
                 std::cout << res.value.value() << "\n";
             }
+        } else if (op == "compact") {
+            std::cout << "compacting\n";
+            bit_barrel.compact();
         }
     }
 }
