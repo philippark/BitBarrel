@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <algorithm>
 #include <fstream>
+#include <mutex>
 
 void BitBarrel::load_key_dir_from_segment(const Segment& segment) {
     auto entries = segment.get_all_entries();
@@ -54,7 +55,7 @@ BitBarrel::BitBarrel(const std::string& dir_name) {
         load_key_dir_from_segment(*segment);
         data_store.push_back(std::move(segment));
     }
-    
+
     if (data_store.empty()) {
         // Create initial segment
         auto segment = create_segment();
@@ -66,6 +67,9 @@ BitBarrel::BitBarrel(const std::string& dir_name) {
 
 Status BitBarrel::set(std::string key, std::string value) {
     std::cout << "active segment size: " << active_segment->get_size() << "\n";
+
+    std::unique_lock<std::shared_mutex> lock(rw_lock);
+
     if (active_segment->is_full(key.size() + value.size())) {
         auto new_segment = create_segment();
         data_store.push_back(std::move(new_segment));
@@ -88,6 +92,8 @@ Status BitBarrel::set(std::string key, std::string value) {
 }
 
 Result<std::string> BitBarrel::get(std::string key) {
+    std::unique_lock<std::shared_mutex> lock(rw_lock);
+
     if (key_dir.find(key) == key_dir.end()) {
         return Result<std::string>{Status::NotFound};
     }
