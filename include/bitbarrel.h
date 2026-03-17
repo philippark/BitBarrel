@@ -8,6 +8,7 @@
 #include <string>
 #include <cstdint>
 #include <memory>
+#include <shared_mutex>
 
 class BitBarrel {
 private:
@@ -23,6 +24,8 @@ private:
     std::unordered_map<std::string, KeyDirEntry> key_dir;
     std::string dir_name;
 
+    std::shared_mutex rw_lock; // read-write lock
+
     // loads key directory entries from a segment
     void load_key_dir_from_segment(const Segment& segment);
 
@@ -34,4 +37,5 @@ public:
     Status set(std::string key, std::string value);
     Result<std::string> get(std::string key);
 
+    void compact();
 };

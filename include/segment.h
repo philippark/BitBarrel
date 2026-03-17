@@ -7,7 +7,8 @@
 #include <cstdint>
 #include <vector>
 
-static constexpr uint64_t MAX_SEGMENT_SIZE = 1ULL * 1024 * 1024 * 1024; // 1GB
+// static constexpr uint64_t MAX_SEGMENT_SIZE = 1ULL * 1024 * 1024 * 1024; // 1GB
+static constexpr uint64_t MAX_SEGMENT_SIZE = 50;
 
 class Segment {
 private:
@@ -47,4 +48,6 @@ public:
     bool is_full(uint64_t incoming_entry_size) {
         return (this->get_size() + sizeof(Header) + incoming_entry_size) > MAX_SEGMENT_SIZE;
     }
+
+    void remove_permanently();
 };

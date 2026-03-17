@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <algorithm>
 #include <fstream>
+#include <mutex>
 
 void BitBarrel::load_key_dir_from_segment(const Segment& segment) {
     auto entries = segment.get_all_entries();
@@ -54,7 +55,7 @@ BitBarrel::BitBarrel(const std::string& dir_name) {
         load_key_dir_from_segment(*segment);
         data_store.push_back(std::move(segment));
     }
-    
+
     if (data_store.empty()) {
         // Create initial segment
         auto segment = create_segment();
@@ -66,6 +67,9 @@ BitBarrel::BitBarrel(const std::string& dir_name) {
 
 Status BitBarrel::set(std::string key, std::string value) {
     std::cout << "active segment size: " << active_segment->get_size() << "\n";
+
+    std::unique_lock<std::shared_mutex> lock(rw_lock);
+
     if (active_segment->is_full(key.size() + value.size())) {
         auto new_segment = create_segment();
         data_store.push_back(std::move(new_segment));
@@ -88,6 +92,8 @@ Status BitBarrel::set(std::string key, std::string value) {
 }
 
 Result<std::string> BitBarrel::get(std::string key) {
+    std::unique_lock<std::shared_mutex> lock(rw_lock);
+
     if (key_dir.find(key) == key_dir.end()) {
         return Result<std::string>{Status::NotFound};
     }
@@ -105,4 +111,82 @@ Result<std::string> BitBarrel::get(std::string key) {
     }
 
     return Result<std::string>{Status::NotFound};
+}
+
+void BitBarrel::compact() {
+    std::vector<Segment*> segments_to_merge;
+
+    {
+        std::shared_lock<std::shared_mutex> lock(rw_lock);
+        for (auto& seg : data_store) {
+            if (seg.get() != active_segment) {
+                segments_to_merge.push_back(seg.get());
+            }
+        }
+    }
+
+    if (segments_to_merge.empty()) {
+        return;
+    }
+
+    uint32_t merge_id = get_current_timestamp();
+    auto merge_seg = std::make_unique<Segment>(merge_id, dir_name + "/" + std::to_string(merge_id));
+
+    for (Segment* old_seg : segments_to_merge) {
+        uint32_t old_id = old_seg->get_id();
+        auto entries = old_seg->get_all_entries();
+
+        for (const auto& entry : entries) {
+            bool is_valid = false;
+            {
+                std::shared_lock<std::shared_mutex> lock(rw_lock);
+                auto it = key_dir.find(entry.key);
+                if (it != key_dir.end() && it->second.segment_id == old_id 
+                    && it->second.value_pos == entry.value_pos) {
+                    is_valid = true;
+                }
+            }
+
+            if (!is_valid) continue;
+
+            auto val_res = old_seg->get(entry.value_pos, entry.value_size);
+            if (!val_res.isOk()) continue;
+
+            // write to merged segment
+            auto set_res = merge_seg->set(entry.key, val_res.value.value());
+            if (!set_res.isOk()) continue;
+
+            // update the key dir
+            {
+                std::unique_lock<std::shared_mutex> lock(rw_lock);
+                auto it = key_dir.find(entry.key);
+                
+                // check main thread hasn't updated this entry
+                if (it != key_dir.end() && it->second.segment_id == old_id 
+                    && it->second.value_pos == entry.value_pos) {
+                    it->second.segment_id = merge_id;
+                    it->second.value_pos = set_res.value.value();
+                }
+            }
+        }
+    }
+
+    {
+        std::unique_lock<std::shared_mutex> lock(rw_lock);
+        
+        // insert merged segment
+        auto it = data_store.end();
+        --it;
+        data_store.insert(it, std::move(merge_seg));
+
+        // remove and physically delete the old segments
+        for (Segment* old_seg : segments_to_merge) {
+            uint32_t old_id = old_seg->get_id();
+            old_seg->remove_permanently();
+            
+            data_store.remove_if([old_id](const std::unique_ptr<Segment>& s) {
+                return s->get_id() == old_id;
+            });
+        }
+    }
 }
