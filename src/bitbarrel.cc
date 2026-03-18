@@ -63,6 +63,16 @@ BitBarrel::BitBarrel(const std::string& dir_name) {
     } 
 
     active_segment = data_store.back().get();
+
+    compaction_thread = std::thread(&BitBarrel::compaction_worker, this);
+}
+
+BitBarrel::~BitBarrel() {
+    compaction_stop = true;
+
+    if (compaction_thread.joinable()) {
+        compaction_thread.join();
+    }
 }
 
 Status BitBarrel::set(std::string key, std::string value) {
@@ -111,6 +121,21 @@ Result<std::string> BitBarrel::get(std::string key) {
     }
 
     return Result<std::string>{Status::NotFound};
+}
+
+void BitBarrel::compaction_worker() {
+    while (!compaction_stop) {
+        for (int i = 0; i < 20 && !compaction_stop; ++i) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+
+        if (compaction_stop) {
+            break;
+        }
+
+        std::cout << "compact\n";
+        this->compact();
+    }
 }
 
 void BitBarrel::compact() {
