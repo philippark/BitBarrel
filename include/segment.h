@@ -45,8 +45,8 @@ public:
 
     uint32_t get_size();
 
-    bool is_full(uint64_t incoming_entry_size) {
-        return (this->get_size() + sizeof(Header) + incoming_entry_size) > MAX_SEGMENT_SIZE;
+    bool can_write(uint64_t incoming_entry_size) {
+        return (this->get_size() + sizeof(Header) + incoming_entry_size) <= MAX_SEGMENT_SIZE;
     }
 
     void remove_permanently();

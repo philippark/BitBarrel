@@ -80,7 +80,7 @@ Status BitBarrel::set(std::string key, std::string value) {
 
     std::unique_lock<std::shared_mutex> lock(rw_lock);
 
-    if (active_segment->is_full(key.size() + value.size())) {
+    if (!active_segment->can_write(key.size() + value.size())) {
         auto new_segment = create_segment();
         data_store.push_back(std::move(new_segment));
         active_segment = data_store.back().get();
