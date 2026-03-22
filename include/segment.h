@@ -35,7 +35,7 @@ public:
     uint32_t get_id() const {return segment_id;};
     
     // writes entry to log, returns offset position for value
-    Result<uint32_t> set(std::string key, std::string value);
+    Result<uint32_t> set(std::string key, std::string value, uint32_t timestamp);
     
     // retrieves value from file at a given offset
     Result<std::string> get(uint32_t value_pos, uint32_t value_size);
@@ -48,6 +48,4 @@ public:
     bool can_write(uint64_t incoming_entry_size) {
         return (this->get_size() + sizeof(Header) + incoming_entry_size) <= MAX_SEGMENT_SIZE;
     }
-
-    void remove_permanently();
 };

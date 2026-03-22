@@ -76,24 +76,22 @@ BitBarrel::~BitBarrel() {
 }
 
 Status BitBarrel::set(std::string key, std::string value) {
-    std::cout << "active segment size: " << active_segment->get_size() << "\n";
-
     std::unique_lock<std::shared_mutex> lock(rw_lock);
-
+    
     if (!active_segment->can_write(key.size() + value.size())) {
         auto new_segment = create_segment();
         data_store.push_back(std::move(new_segment));
         active_segment = data_store.back().get();
     }
 
-    Result<uint32_t> res = active_segment->set(key, value); 
+    uint32_t timestamp = get_current_timestamp();
+    Result<uint32_t> res = active_segment->set(key, value, timestamp); 
     if (!res.isOk()) {
         return Status::Error;
     }
     uint32_t value_pos = res.value.value();
 
     // update key directory
-    uint32_t timestamp = get_current_timestamp();
     KeyDirEntry kde {active_segment->get_id(),
         static_cast<uint32_t>(value.size()), value_pos, timestamp};
     key_dir[key] = kde;
@@ -102,7 +100,7 @@ Status BitBarrel::set(std::string key, std::string value) {
 }
 
 Result<std::string> BitBarrel::get(std::string key) {
-    std::unique_lock<std::shared_mutex> lock(rw_lock);
+    std::shared_lock<std::shared_mutex> lock(rw_lock);
 
     if (key_dir.find(key) == key_dir.end()) {
         return Result<std::string>{Status::NotFound};
@@ -133,7 +131,6 @@ void BitBarrel::compaction_worker() {
             break;
         }
 
-        std::cout << "compact\n";
         this->compact();
     }
 }
@@ -141,6 +138,7 @@ void BitBarrel::compaction_worker() {
 void BitBarrel::compact() {
     std::vector<Segment*> segments_to_merge;
 
+    // get segments to merge
     {
         std::shared_lock<std::shared_mutex> lock(rw_lock);
         for (auto& seg : data_store) {
@@ -162,6 +160,7 @@ void BitBarrel::compact() {
         auto entries = old_seg->get_all_entries();
 
         for (const auto& entry : entries) {
+            // check if entry is valid (is the most recent value)
             bool is_valid = false;
             {
                 std::shared_lock<std::shared_mutex> lock(rw_lock);
@@ -174,11 +173,11 @@ void BitBarrel::compact() {
 
             if (!is_valid) continue;
 
-            auto val_res = old_seg->get(entry.value_pos, entry.value_size);
-            if (!val_res.isOk()) continue;
+            auto val_pos = old_seg->get(entry.value_pos, entry.value_size);
+            if (!val_pos.isOk()) continue;
 
             // write to merged segment
-            auto set_res = merge_seg->set(entry.key, val_res.value.value());
+            auto set_res = merge_seg->set(entry.key, val_pos.value.value(), entry.timestamp);
             if (!set_res.isOk()) continue;
 
             // update the key dir
@@ -207,11 +206,13 @@ void BitBarrel::compact() {
         // remove and physically delete the old segments
         for (Segment* old_seg : segments_to_merge) {
             uint32_t old_id = old_seg->get_id();
-            old_seg->remove_permanently();
-            
+
             data_store.remove_if([old_id](const std::unique_ptr<Segment>& s) {
                 return s->get_id() == old_id;
             });
+
+            std::string path = dir_name + "/" + std::to_string(old_id);
+            std::filesystem::remove(path);
         }
     }
 }
