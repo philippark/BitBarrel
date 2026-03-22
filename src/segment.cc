@@ -9,7 +9,7 @@ Segment::Segment(uint32_t segment_id, std::string file_path) {
     this->segment_id = segment_id;
 }
 
-Result<uint32_t> Segment::set(std::string key, std::string value) {
+Result<uint32_t> Segment::set(std::string key, std::string value, uint32_t timestamp) {
     if (!file.is_open()) {
         file.open(file_path, std::ios::out | std::ios::binary | std::ios::app);
         if (!file) throw std::runtime_error("Cannot open file for writing: " + file_path);
@@ -19,7 +19,7 @@ Result<uint32_t> Segment::set(std::string key, std::string value) {
     uint32_t value_size = static_cast<uint32_t>(value.size());
 
     Header header;
-    header.timestamp = get_current_timestamp();
+    header.timestamp = timestamp;
     header.key_size = key_size; 
     header.value_size = value_size; 
     
@@ -81,13 +81,21 @@ std::vector<Segment::Entry> Segment::get_all_entries() const {
         if (!read_file.read(reinterpret_cast<char*>(&header), sizeof(header))) {
             break;
         }
+
+        if (header.key_size > 1024 * 1024 || header.value_size > 100 * 1024 * 1024) {
+            throw std::runtime_error("Corrupt header: size too large");
+        }
         
         std::string key(header.key_size, '\0');
         if (!read_file.read(key.data(), header.key_size)) {
             break;
         }
-        
+
         std::streampos value_offset = read_file.tellg();
+        if (value_offset == std::streampos(-1)) {
+            throw std::runtime_error("Reading offset failed");
+        }
+
         uint32_t value_pos = static_cast<std::streamoff>(value_offset);
         // Skip the value
         read_file.seekg(header.value_size, std::ios::cur);
@@ -105,8 +113,4 @@ uint32_t Segment::get_size() {
         return 0; // file doesn't exist yet
     }
     return size;
-}
-
-void Segment::remove_permanently() {
-    std::filesystem::remove(file_path);
 }
